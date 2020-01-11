@@ -1,0 +1,122 @@
+<html>
+  <head>
+    <title>WEBGDP</title>
+
+    <style>
+        #scstream {
+          width: 100%;
+          user-select: none;
+          pointer-events: none;
+          display: block;
+          
+        }
+
+        html, body {
+          overflow: hidden;
+          margin: 0px;
+          padding: 0px;
+          -webkit-text-size-adjust: none;
+          position: fixed;
+          width: 100%;
+          height: 100%;
+        }
+
+        
+    </style>
+
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+
+    <meta name="viewport" content="width=device-width, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="HandheldFriendly" content="true">
+
+  </head>
+  <body>
+    <img id="scstream" draggable="false" src="">
+    <br>
+    <label>Quality: </label><input type=number min=1 max=10 value=9 id="quality-input">
+  </body>
+
+  <script type="text/javascript" charset="utf-8">
+  
+    function preventDefault(e){
+      e.preventDefault();
+    }
+
+    document.body.addEventListener('touchmove', preventDefault, { passive: false });
+
+    var socket = io();
+
+    socket.on('connect', function() {
+      console.log("Connected");
+    });
+
+    socket.on('video_frame', function(frame) {
+      $("#scstream").attr('src', 
+        'data:image/png;base64,'+frame
+      )
+    })
+
+    $(document).on('touchstart mousedown', function(e){
+      var data;
+      
+      if (event.type == 'mousedown') {
+        data = {x: e.originalEvent.pageX/$("#scstream").width(), y: e.originalEvent.pageY/$("#scstream").height()};
+      } else if (event.type == 'touchstart') {
+        data = {x: e.originalEvent.touches[0].pageX/$("#scstream").width(), y: e.originalEvent.touches[0].pageY/$("#scstream").height()};
+      }
+
+      if(data.x <= 1 && data.x >= 0 && data.y <= 1 && data.y >= 0) {
+        socket.emit("mousedown", data)
+      }
+
+    });
+
+    $(document).on('touchend mouseup', function(e){
+      socket.emit("mouseup")
+    });
+
+    $(document).on('touchmove mousemove', function(e){
+
+      var data;
+
+      if (event.type == 'mousemove') {
+
+        data = {x: e.originalEvent.pageX/$("#scstream").width(), y: e.originalEvent.pageY/$("#scstream").height()};
+
+      } else if (event.type == 'touchmove') {
+
+        var realTarget = document.elementFromPoint(e.originalEvent.touches[0].clientX, e.originalEvent.touches[0].clientY);
+        data = {x: (e.originalEvent.touches[0].pageX-realTarget.getBoundingClientRect().x)/$("#scstream").width(), y: (e.originalEvent.touches[0].pageY-realTarget.getBoundingClientRect().y)/$("#scstream").height()};
+      
+      }
+
+      if(data.x <= 1 && data.x >= 0 && data.y <= 1 && data.y >= 0) {
+        socket.emit("mousemove", data)
+      }
+
+    });
+
+    $(document).on('keydown', function(e){
+      socket.emit("keydown", e.key)
+    });
+    
+    /*
+    $(document).on('keyup', function(e){
+      if (e.key != 'Dead') {
+        socket.emit("keyup", e.key)
+      }
+    });
+    */
+
+    $("#quality-input").on('input', function(e) {
+      socket.emit("setting_quality", this.value);
+    })
+
+
+  </script>
+
+</html>
+
